@@ -1,27 +1,27 @@
-name: Python Poetry Setup
-description: Set up Python + Poetry, cache dependencies, and install project deps
+name: Python uv Setup
+description: Set up Python + uv, cache dependencies, and install project deps
 
 inputs:
   python-version:
     description: Python version to install
     required: false
     default: "3.14"
-  poetry-version:
-    description: Poetry version to install
+  uv-version:
+    description: uv version to install
     required: false
-    default: "2.3.2"
+    default: "0.11.14"
   working-directory:
     description: Project directory containing pyproject.toml
     required: false
     default: "app_python"
   lockfile-path:
-    description: Path to poetry.lock for cache key invalidation
+    description: Path to uv.lock for cache key invalidation
     required: false
-    default: "app_python/poetry.lock"
+    default: "app_python/uv.lock"
   install-args:
-    description: Extra arguments passed to poetry install
+    description: Extra arguments passed to uv sync
     required: false
-    default: "--with dev --no-interaction --no-ansi"
+    default: "--locked"
 
 runs:
   using: composite
@@ -31,27 +31,15 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
+    - name: Setup uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
-        version: ${{ inputs.poetry-version }}
-
-    - name: Configure Poetry virtualenv location
-      shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      run: poetry config virtualenvs.in-project true
-
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v5
-      with:
-        path: |
-          ~/.cache/pypoetry
-          ${{ inputs.working-directory }}/.venv
-        key: ${{ runner.os }}-py${{ inputs.python-version }}-poetry${{ inputs.poetry-version }}-${{ hashFiles(inputs.lockfile-path) }}
-        restore-keys: |
-          ${{ runner.os }}-py${{ inputs.python-version }}-poetry${{ inputs.poetry-version }}-
+        version: ${{ inputs.uv-version }}
+        python-version: ${{ inputs.python-version }}
+        enable-cache: true
+        cache-dependency-glob: ${{ inputs.lockfile-path }}
 
     - name: Install dependencies
       shell: bash
       working-directory: ${{ inputs.working-directory }}
-      run: poetry install ${{ inputs.install-args }}
+      run: uv sync ${{ inputs.install-args }}
